@@ -1,5 +1,5 @@
 CPP=g++
-CCFLAGS=-O3 -fopenmp
+CCFLAGS=-O3
 LDFLAGS= 
 SOURCES=Circuit.cpp SCDLProgram.cpp eval.cpp
 OBJECTS=$(SOURCES:.cpp=.o)

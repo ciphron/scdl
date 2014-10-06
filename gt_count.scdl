@@ -1,3 +1,5 @@
+# Free software under GPl v.3 (see LICENSE file).
+
 include "base.scdl"
 
 # Our inputs - 8 bits each
