@@ -1,0 +1,52 @@
+include "base.scdl"
+
+# Our inputs - 8 bits each
+input A : 8
+input B0 : 8
+input B1 : 8
+input B2 : 8
+input B3 : 8
+input B4 : 8
+
+# Greater than function - checks if 8-bit value X is greater than 8-bit value Y
+func gt(X : 8, Y : 8) = or(X[7]*not(Y[7]),\
+   or(X[7]*not(Y[7]),\
+   or(equal(X[7], Y[7])*X[6]*not(Y[6]),\
+   or(equal(X[7], Y[7])*equal(X[6], Y[6])*X[5]*not(Y[5]),\
+   or(equal(X[7], Y[7])*equal(X[6], Y[6])*equal(X[5], Y[5])*X[4]*not(Y[4]),\
+   or(equal(X[7], Y[7])*equal(X[6], Y[6])*equal(X[5], Y[5])*equal(X[4], Y[4])*X[3]*not(Y[3]),\
+   or(equal(X[7], Y[7])*equal(X[6], Y[6])*equal(X[5], Y[5])*equal(X[4], Y[4])*equal(X[3], Y[3])*X[2]*not(Y[2]),\
+   or(equal(X[7], Y[7])*equal(X[6], Y[6])*equal(X[5], Y[5])*equal(X[4], Y[4])*equal(X[3], Y[3])*equal(X[2], Y[2])*X[1]*not(Y[1]),\
+    equal(X[7], Y[7])*equal(X[6], Y[6])*equal(X[5], Y[5])*equal(X[4], Y[4])*equal(X[3], Y[3])*equal(X[2], Y[2])*equal(X[1], Y[1])*X[0]*not(Y[0])))))))))
+
+
+# The desired result here is the number of values in the set {B0, ..., B4}
+# that are greater than the value A. The result is given by the bits
+# f2, f1, f0 - ordered from MSB to LSB. Since we can only output a single
+# bit, we output f0 here as example (that is, we define special function "out")
+# to be equal to f0.
+
+func gt4 = gt(B4,A)
+func gt3 = gt(B3,A)
+func gt2 = gt(B2, A)
+func gt1 = gt(B1,A)
+func gt0 = gt(B0,A)
+
+func s0a1 = gt0 + gt1
+func c0a1 = gt0 * gt1
+
+func s2a3 = gt2 + gt3
+func c2a3 = gt2 * gt3
+
+func s0 = s0a1 + s2a3
+func s1 = add_s(c0a1, c2a3, s0a1 * s2a3)
+func s2 = add_c(c0a1, c2a3, s0a1 + s2a3)
+
+
+func f0 = s0 + gt4
+func f1 = s1 + (s0 * gt4)
+func f2 = s2
+
+func out = f0
+
+
