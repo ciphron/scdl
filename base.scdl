@@ -1,0 +1,16 @@
+constant one = 1
+constant zero = 0
+
+func equal(x, y) = (x + y) + one
+func not(x) = x + one
+func or(x, y) = x + y + (x*y)
+
+func add_s(x, y, carry) = x + y + carry
+func add_c(x, y, carry) = or((x * y), (x + y) * carry)
+
+func add_s_h(x, y) = x + y
+
+func add_one_s(x, c) = x + one + c
+func add_one_c(x, c) = or(x, (not(x)  * c))
+
+func if(cond, t, f) = (cond*t) + (not(cond)*f)
