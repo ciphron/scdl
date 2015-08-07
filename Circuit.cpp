@@ -13,7 +13,6 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-
 #include "Circuit.h"
 
 #include <iostream>
@@ -21,12 +20,12 @@
 
 #include <algorithm>
 
+namespace scdl {
 
-/**
- * Store circuit in internal form. Makes a copy of every gate.
- */
-bool Circuit::check_well_formed(std::vector<InternalGate> &gates, size_t n_inputs,
-                                Gate *current_gate, std::map<Gate*,unsigned int> &visited,
+bool Circuit::check_well_formed(std::vector<InternalGate> &gates,
+                                size_t n_inputs,
+                                Gate *current_gate,
+                                std::map<Gate*,unsigned int> &visited,
                                 unsigned int *gate_index, int depth)
 {
     if (visited.find(current_gate) != visited.end()) {
@@ -147,3 +146,4 @@ void Circuit::free_gates()
     }
 }
 
+}

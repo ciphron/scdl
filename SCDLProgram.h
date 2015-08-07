@@ -13,7 +13,6 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-
 #ifndef SCDL_PROGRAM_H
 #define SCDL_PROGRAM_H
 
@@ -22,6 +21,11 @@
 #include <map>
 #include <cstdlib>
 #include "Circuit.h"
+
+#include <boost/lexical_cast.hpp>
+
+namespace scdl {
+namespace compiler {
 
 struct Constant {
     int value;
@@ -34,58 +38,76 @@ struct Variable {
 };
 
 
+
+
 class SCDLProgram {
  public:
-    
+
+    ~SCDLProgram();
+
+    bool has_variable(const std::string &var_name) const;
     Variable get_variable(const std::string &var_name) const;
     Constant get_constant(const std::string &const_name) const;
     Constant get_constant(unsigned int constant_no) const;
     std::string get_variable_name(unsigned int input_index) const;
     size_t get_num_variables() const;
     size_t get_num_variable_inputs() const;
-    Circuit *get_circuit() const;
+    Circuit *get_circuit(const std::string &circuit_name) const;
+    std::vector<std::string>::const_iterator get_circuit_names() const;
+    bool has_circuit(const std::string &circuit_name) const;
+    size_t get_num_circuits() const;
     bool has_input_variable(const std::string &var_name) const;
     size_t get_num_constants() const;
     bool has_constant(const std::string &const_name) const;
     std::string get_constant_name(unsigned int constant_no) const;
 
     template <class T>
-    T run(T *var_inputs, T *constants) {
+    T run(const std::string &circuit_name, T *var_inputs, T *constants) {
+        if (circuit_map.find(circuit_name) == circuit_map.end())
+            throw "Could not find circuit";
+        Circuit *circuit = circuit_map[circuit_name];
         std::vector<T> inputs;
-        std::map<std::string,Constant>::iterator itr;
 
         for (int i = 0; i < n_var_inputs; i++)
             inputs.push_back(var_inputs[i]);
 
         for (int i =0; i < const_names.size(); i++) {            
             Constant constant = const_map[const_names[i]];
-           
+
             inputs.push_back(constants[i]);
         }
 
-        return circuit->evaluate(&inputs[0]);
+        return circuit->evaluate(&inputs[0], true);
     }
-        
+
+    template <class T>
+    T run(T *var_inputs, T *constants) {
+        return run("out", var_inputs, constants);
+    }
+
+       
     
     static SCDLProgram *compile_program_from_file(std::string file_name);
 
  protected:
-    SCDLProgram(Gate *output_gate,
+    SCDLProgram(std::map<std::string,Gate*> &func_gates,
                 std::map<std::string,Variable> &var_map,
                 std::map<std::string,Constant> &const_map);
-    ~SCDLProgram();
 
 
 
  private:
-    Circuit *circuit;
     std::map<std::string,Constant> const_map;
     std::vector<std::string> const_names;
     std::map<std::string,Variable> var_map;
     std::vector<std::string> var_names;
+    std::map<std::string,Circuit*> circuit_map;
     size_t n_var_inputs;
+    std::vector<std::string> circuit_names;
 
 };
 
+}
+}
 
 #endif // SCDL_PROGRAM_H

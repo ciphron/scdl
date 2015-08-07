@@ -1,4 +1,4 @@
-# Free software under GPl v.3 (see LICENSE file).
+# Free software under GPl v.3 (see LICENSE file)
 
 include "base.scdl"
 
@@ -13,20 +13,18 @@ input B4 : 8
 # Greater than function - checks if 8-bit value X is greater than 8-bit value Y
 func gt(X : 8, Y : 8) = or(X[7]*not(Y[7]),\
    or(X[7]*not(Y[7]),\
-   or(equal(X[7], Y[7])*X[6]*not(Y[6]),\
-   or(equal(X[7], Y[7])*equal(X[6], Y[6])*X[5]*not(Y[5]),\
-   or(equal(X[7], Y[7])*equal(X[6], Y[6])*equal(X[5], Y[5])*X[4]*not(Y[4]),\
-   or(equal(X[7], Y[7])*equal(X[6], Y[6])*equal(X[5], Y[5])*equal(X[4], Y[4])*X[3]*not(Y[3]),\
-   or(equal(X[7], Y[7])*equal(X[6], Y[6])*equal(X[5], Y[5])*equal(X[4], Y[4])*equal(X[3], Y[3])*X[2]*not(Y[2]),\
-   or(equal(X[7], Y[7])*equal(X[6], Y[6])*equal(X[5], Y[5])*equal(X[4], Y[4])*equal(X[3], Y[3])*equal(X[2], Y[2])*X[1]*not(Y[1]),\
-    equal(X[7], Y[7])*equal(X[6], Y[6])*equal(X[5], Y[5])*equal(X[4], Y[4])*equal(X[3], Y[3])*equal(X[2], Y[2])*equal(X[1], Y[1])*X[0]*not(Y[0])))))))))
+   or(eq(X[7], Y[7])*X[6]*not(Y[6]),\
+   or(eq(X[7], Y[7])*eq(X[6], Y[6])*X[5]*not(Y[5]),\
+   or(eq(X[7], Y[7])*eq(X[6], Y[6])*eq(X[5], Y[5])*X[4]*not(Y[4]),\
+   or(eq(X[7], Y[7])*eq(X[6], Y[6])*eq(X[5], Y[5])*eq(X[4], Y[4])*X[3]*not(Y[3]),\
+   or(eq(X[7], Y[7])*eq(X[6], Y[6])*eq(X[5], Y[5])*eq(X[4], Y[4])*eq(X[3], Y[3])*X[2]*not(Y[2]),\
+   or(eq(X[7], Y[7])*eq(X[6], Y[6])*eq(X[5], Y[5])*eq(X[4], Y[4])*eq(X[3], Y[3])*eq(X[2], Y[2])*X[1]*not(Y[1]),\
+    eq(X[7], Y[7])*eq(X[6], Y[6])*eq(X[5], Y[5])*eq(X[4], Y[4])*eq(X[3], Y[3])*eq(X[2], Y[2])*eq(X[1], Y[1])*X[0]*not(Y[0])))))))))
 
 
 # The desired result here is the number of values in the set {B0, ..., B4}
 # that are greater than the value A. The result is given by the bits
-# f2, f1, f0 - ordered from MSB to LSB. Since we can only output a single
-# bit, we output f0 here as example (that is, we define special function "out")
-# to be equal to f0.
+# out2, out1, out0 - ordered from MSB to LSB.
 
 func gt4 = gt(B4,A)
 func gt3 = gt(B3,A)
@@ -45,10 +43,8 @@ func s1 = add_s(c0a1, c2a3, s0a1 * s2a3)
 func s2 = add_c(c0a1, c2a3, s0a1 + s2a3)
 
 
-func f0 = s0 + gt4
-func f1 = s1 + (s0 * gt4)
-func f2 = s2
-
-func out = f0
+func out0 = s0 + gt4
+func out1 = s1 + (s0 * gt4)
+func out2 = s2
 
 

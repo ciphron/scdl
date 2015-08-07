@@ -1,18 +1,9 @@
+To compile the program you need libjson. Run make to compile. See the documentation in scdl.pdf for information on the syntax of the SCDL language along with information on the format of an accompanying ".scdl.vars" file. See the two examples included: gt.scdl and its corresponding vars file gt.scdl.vars and gt_count.scdl and its corresponding vars file gt_count.scdl.vars. For example to evaluate gt.scdl, run:
 
-The example SCDL program (gt_count.scdl) returns a count of the number of 8-bit values from a set of 5 (i.e. {B0, ..., B4} that is greater than another 8-bit value, A. The vectors A, B0, B1, B2, B3, B4 and B5 are assigned values in the file test.eval. Each line of that file is of the form:
-<VAR_NAME> = (V0,V1,V2,V3,V4,V5,V6,V7) where V0, ..., V7 are bits and <VAR_NAME> is a variable name (such as 'A') - note that V0 and V7 denote the LSB and MSB respectively of the corresponding value in our example.
+./eval gt.scdl
 
-Presently, an SCDL program outputs a single value. When working with binary (as is the default case here), this means that the output is a single bit. The bit it outputs is the result of a special function called "out", which must be defined in a program for it to be considered valid. The function "out" must take no arguments, and it may refer to the "inputs" of the circuit. All variables it references are considered inputs. SCDL includes syntax to explicitly declare inputs: to declare input variable 'A' of length 8 bits, we write
+This prompts you to enter the two inputs (which are unsigned integers) and it prints the output (which is a boolean) that indicates whether the first integer is greater than the second one.
 
-input A : 8
+Take a look at gt_count.scdl for a larger example.
 
-(see gt_count.scdl for more info).
-
-To run the example, type:
-
-make
-./eval gt_count.scdl test.eval
-
-All code is licenesed under GPL v.3. See LICENSE.
-
-
+If an SCDL file, say x.scdl, is specified as a command line argument to the interpreter, it looks for a JSON-encoded vars file x.scdl.vars. See the documentation and the examples to understand the format of this file.

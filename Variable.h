@@ -13,28 +13,27 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef COMMON_H
-#define COMMON_H
+#ifndef VARIABLE_H
+#define VARIABLE_H
 
-#include <boost/algorithm/string.hpp>
-#include <boost/lexical_cast.hpp>
+#include <vector>
+#include <string>
 
+namespace scdl {
 
-template <class T>
-T read_numeric(std::string str)
-{
-    T value;
+enum VariableType {
+    VAR_UINT,
+    VAR_INT,
+    VAR_BOOL,
+    VAR_BITSTRING
+};
 
-    try {
-        boost::trim(str);
-        value = boost::lexical_cast<T>(str);
-    }
-    catch (const boost::bad_lexical_cast &) {
-        throw "Could not parse numeric value";
-    }
+struct Variable {
+    VariableType type;
+    std::string name;
+    std::vector<std::string> components;
+};
 
-    return value;
 }
 
-
-#endif // COMMON_H
+#endif // VARIABLE_H

@@ -13,32 +13,38 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-
 #include "Circuit.h"
 #include "common.h"
-#include <ctype.h>
 #include <stack>
-#include <queue>
 #include <fstream>
 #include <boost/algorithm/string.hpp>
 #include <boost/lexical_cast.hpp>
 
 #include "SCDLProgram.h"
 
-/*
- * This is a quick-and-dirty "compiler" for a simple functional language
- * to represent arithmetic circuits. The language, and this "compiler",
- * are at a very early stage in development. This implementation is
- * a basic proof-of-concept.
- */
+#define BUFFER_SIZE 1024
 
 using namespace std;
 using namespace boost;
 
+namespace scdl {
+
+/*
+ * We use a different namespace here because there may be
+ * name conflicts. Strictly speaking this is an interpreter
+ * at present but we might be translating to a traget language in the near
+ * future.
+ */
+namespace compiler {
 
 typedef map<string,Gate*> VariableMap;
 typedef pair<string,Gate*> VarMapping;
 
+
+struct InputDesc {
+    unsigned int value;
+    unsigned int key_index;
+};
 
 
 enum TokenType {
@@ -117,7 +123,7 @@ string print_tokens(const list<Token> &tokens);
 string array_name(const string &aname, unsigned int index);
 bool is_special_char(char c);
 bool is_operator(Token token);
-void print_stack(stack<Token> stack);
+void print_stack(std::stack<Token> stack);
 void print_circuit(Gate *gate);
 
 struct Function {
@@ -147,10 +153,6 @@ typedef map<string,SymbolInfo> SymbolTable;
 typedef pair<string,SymbolInfo> SymbolMapping;
 
 
-/**
- * This class repepresents the state of a /particular/ compilation
- * of a program - it maintains the symbol table etc.
- */
 class Compilation {
 public:
     Compilation(string file_name);
@@ -164,7 +166,7 @@ public:
     void fill_function_info(map<string,Function> &name_to_function);
 
 private:
-    bool compile(string file_name);
+    bool compile(const string &file_name);
     FunctionDesc *parse_function(string expr, const vector<string> &params);
     FunctionDesc *read_function(string str);
     void add_new_function(FunctionDesc *desc, Gate *gate=NULL);
@@ -193,8 +195,9 @@ private:
  * #########################################################
  */
 
-SCDLProgram::SCDLProgram(Gate *output_gate, map<string,Variable> &var_map,
-                         map<string,Constant> &const_map ) 
+SCDLProgram::SCDLProgram(map<string,Gate*> &func_gates,
+                         map<string,Variable> &var_map,
+                         map<string,Constant> &const_map) 
     : var_map(var_map), var_names(var_map.size()), const_map(const_map) {
 
     map<string,Variable>::iterator itr;
@@ -212,15 +215,26 @@ SCDLProgram::SCDLProgram(Gate *output_gate, map<string,Variable> &var_map,
         const_names.push_back(citr->first);
         n_inputs++;
     }
-
-    circuit = new Circuit(n_inputs, output_gate);
+    map<string,Gate*>::iterator fitr;
+    for (fitr = func_gates.begin(); fitr != func_gates.end(); fitr++) {
+        circuit_map[fitr->first] = new Circuit(n_inputs, fitr->second);
+        circuit_names.push_back(fitr->first);
+    }
 }
 
 SCDLProgram::~SCDLProgram() {
-    if (circuit != NULL)
-        delete circuit;
-    circuit = NULL;
+    map<string,Circuit*>::iterator itr;
+    for (itr = circuit_map.begin(); itr != circuit_map.end(); itr++) {
+        delete itr->second;
+    }
+    circuit_map.clear();
 }
+
+bool SCDLProgram::has_variable(const string &var_name) const
+{
+    return var_map.find(var_name) != var_map.end();
+}
+
 
 Variable SCDLProgram::get_variable(const string &var_name) const
 {
@@ -273,9 +287,25 @@ size_t SCDLProgram::get_num_variable_inputs() const
     return n_var_inputs;
 }
 
-Circuit *SCDLProgram::get_circuit() const
+Circuit *SCDLProgram::get_circuit(const std::string &circuit_name) const
 {
-    return circuit;
+    return circuit_map.at(circuit_name);
+}
+
+vector<string>::const_iterator SCDLProgram::get_circuit_names() const
+{
+    return circuit_names.begin();
+}
+
+
+bool SCDLProgram::has_circuit(const std::string &circuit_name) const
+{
+    return circuit_map.find(circuit_name) != circuit_map.end();
+}
+
+size_t SCDLProgram::get_num_circuits() const
+{
+    return circuit_map.size();
 }
 
 SCDLProgram *SCDLProgram::compile_program_from_file(string file_name)
@@ -284,17 +314,27 @@ SCDLProgram *SCDLProgram::compile_program_from_file(string file_name)
     compilation.run();
 
     map<string,Function> name_to_function;
+    map<string,Gate*> gate_map;
     compilation.fill_function_info(name_to_function);
-    if (name_to_function.find("out") == name_to_function.end())
-        throw "No output circuit defined";        
-    Gate *output_gate = name_to_function["out"].output_gate;
+
+    map<string,Function>::iterator itr;
+    for (itr = name_to_function.begin(); itr != name_to_function.end();
+         itr++) {
+        Function f = itr->second;
+        if (f.params.size() == 0)
+            gate_map[itr->first] = f.output_gate;
+    }
+        
+    // if (name_to_function.find("out") == name_to_function.end())
+    //     throw "No output circuit defined";
+    // Gate *output_gate = name_to_function["out"].output_gate;
     map<string,Variable> name_to_variable;
     map<string,Constant> name_to_constant;
 
     compilation.fill_variable_info(name_to_variable);
     compilation.fill_constant_info(name_to_constant);
 
-    return new SCDLProgram(output_gate, name_to_variable, name_to_constant);;
+    return new SCDLProgram(gate_map, name_to_variable, name_to_constant);;
 }
 
 
@@ -305,13 +345,11 @@ SCDLProgram *SCDLProgram::compile_program_from_file(string file_name)
  * #########################################################
  */
 
-/**
- * TODO: provide a better interface to access compilation info
- */
 void Compilation::fill_variable_info(map<string,Variable> &name_to_index)
 {
     // fill variable info
-    for (SymbolTable::iterator itr = sym_table.begin(); itr != sym_table.end(); itr++) {
+    for (SymbolTable::iterator itr = sym_table.begin(); itr != sym_table.end();
+         itr++) {
         SymbolInfo sym = itr->second;
         if (sym.type == SYM_VARIABLE) {
             Variable v;
@@ -325,7 +363,8 @@ void Compilation::fill_variable_info(map<string,Variable> &name_to_index)
 void Compilation::fill_constant_info(map<string,Constant> &name_to_constant)
 {
     // fill constant info
-    for (SymbolTable::iterator itr = sym_table.begin(); itr != sym_table.end(); itr++) {
+    for (SymbolTable::iterator itr = sym_table.begin(); itr != sym_table.end();
+         itr++) {
         SymbolInfo sym = itr->second;
         if (sym.type == SYM_CONSTANT) {
             Constant c;
@@ -339,7 +378,8 @@ void Compilation::fill_constant_info(map<string,Constant> &name_to_constant)
 void Compilation::fill_function_info(map<string,Function> &name_to_function)
 {
     // fill function info
-    for (SymbolTable::iterator itr = sym_table.begin(); itr != sym_table.end(); itr++) {
+    for (SymbolTable::iterator itr = sym_table.begin(); itr != sym_table.end();
+         itr++) {
         SymbolInfo sym = itr->second;
         if (sym.type == SYM_FUNCTION) {
             Function f;
@@ -354,11 +394,7 @@ void Compilation::fill_function_info(map<string,Function> &name_to_function)
 
 
 
-/**
- * This method takes in a sequence of tokens in RPN form
- * (e.g: the output of the shunting yard algorithm) and builds
- * a circuit from this.
- */
+
 Gate *Compilation::build_circuit_from_rpn_rec(list<Token> &tokens)
 {
     if (tokens.empty())
@@ -386,7 +422,8 @@ Gate *Compilation::build_circuit_from_rpn_rec(list<Token> &tokens)
         oper.op = (token.type == TOKEN_OP_MUL) ? GATE_MULT : GATE_ADD;
 
         if (operations.find(oper) == operations.end()) {        
-            Gate *op_gate = alloc_operator_gate((token.type == TOKEN_OP_MUL) ? GATE_MULT : GATE_ADD,
+            Gate *op_gate = alloc_operator_gate((token.type == TOKEN_OP_MUL)
+                                                ? GATE_MULT : GATE_ADD,
                                                 left, right);
             operations.insert(pair<Operation,Gate*>(oper, op_gate));
             return op_gate;
@@ -417,7 +454,8 @@ Compilation::~Compilation()
     vector<Gate*>::iterator itr;
     for (itr = allocated_gates.begin(); itr != allocated_gates.end(); itr++)
         delete *itr;
-    for (SymbolTable::iterator sitr = sym_table.begin(); sitr != sym_table.end(); sitr++) {
+    for (SymbolTable::iterator sitr = sym_table.begin();
+         sitr != sym_table.end(); sitr++) {
         if (sitr->second.gates != NULL) {
             delete[] sitr->second.gates;
             sitr->second.gates = NULL;
@@ -431,7 +469,8 @@ Compilation::~Compilation()
  * TODO: This methods badly needs tidyng up and refactoring.
  * Also control flow changes (avoidance of continue) are needed.
  */
-FunctionDesc *Compilation::parse_function(string expr, const vector<string> &params)
+FunctionDesc *Compilation::parse_function(string expr,
+                                          const vector<string> &params)
 {
     expr += ";";
 
@@ -465,7 +504,7 @@ FunctionDesc *Compilation::parse_function(string expr, const vector<string> &par
             if (find(params.begin(), params.end(), cur_sym_name) !=
                      params.end()) {
                 // Handle argument
-                output.push_back(Token(TOKEN_ARGUMENT, cur_sym_name));                
+                output.push_back(Token(TOKEN_ARGUMENT, cur_sym_name));       
             }
             else if (sym_table.find(cur_sym_name) != sym_table.end()) {
                 // Symbol exists
@@ -475,13 +514,19 @@ FunctionDesc *Compilation::parse_function(string expr, const vector<string> &par
                         if (sym.len > 1) {
                             if (t != '[')
                                 throw "Expected [";
-                            pos = parse_array_index(expr, pos, &ind);
+
+                            // we decrement returned pos because it is
+                            // incremented below
+                            pos = parse_array_index(expr, pos, &ind) - 1;
                             if (ind >= sym.len)
                                 throw "Index out of range";
-                            output.push_back(Token(TOKEN_OPERAND, sym.gates[ind]));
+                            output.push_back(Token(TOKEN_OPERAND,
+                                                   sym.gates[ind]));
                         }
-                        else 
-                            output.push_back(Token(TOKEN_OPERAND, sym.gates[0]));
+                        else {
+                            output.push_back(Token(TOKEN_OPERAND,
+                                                   sym.gates[0]));
+                        }
                         break;
                     case SYM_CONSTANT:
                         output.push_back(Token(TOKEN_OPERAND, sym.gates[0]));
@@ -493,13 +538,15 @@ FunctionDesc *Compilation::parse_function(string expr, const vector<string> &par
                                 throw "FunctionDesc expects arguments";
                             vector<string> pre_arg_exprs;
                             vector<string> arg_exprs; 
-                            pos = parse_function_call(expr, ++pos, pre_arg_exprs);                            
+                            pos = parse_function_call(expr, ++pos,
+                                                      pre_arg_exprs);
                             for (int i = 0; i < pre_arg_exprs.size(); i++) {
                                 string arg = pre_arg_exprs[i];
                                 trim(arg);
                                 if (sym_table.find(arg) != sym_table.end()) {
                                     SymbolInfo sym = sym_table[arg];
-                                    if (sym.type == SYM_VARIABLE && sym.len > 1) {
+                                    if (sym.type == SYM_VARIABLE &&
+                                            sym.len > 1) {
                                         for (int j = 0; j < sym.len; j++) {
                                             string name = array_name(arg, j);
                                             arg_exprs.push_back(name);
@@ -509,26 +556,29 @@ FunctionDesc *Compilation::parse_function(string expr, const vector<string> &par
                                         arg_exprs.push_back(arg);
                                 }
                                 else
-                                    arg_exprs.push_back(arg);                                
+                                    arg_exprs.push_back(arg);
                             }
                             // Parse args strings
                             if (arg_exprs.size() != f->params.size()) {
-                                throw "Incorrect number of arguments passed to function";
+                                throw "Incorrect number of arguments passed "
+                                      "to function";
                             }
                             map<string,FunctionDesc*> args;
                             for (int i = 0; i < arg_exprs.size(); i++) {
-                                FunctionDesc *g = parse_function(arg_exprs[i],  params);
+                                FunctionDesc *g = parse_function(arg_exprs[i],
+                                                                 params);
                                 args[f->params[i]] = g;
                             }
                             instantiate_function(output, f, args);
 
-                            pos++; // point to next character for next iteration
+                            pos++; // point to next char for next iteration
                             cur_sym_name = "";
                             continue;
                         }
                            
                         else {
-                            output.push_back(Token(TOKEN_CIRCUIT, sym.gates[0]));
+                            output.push_back(Token(TOKEN_CIRCUIT,
+                                                   sym.gates[0]));
                         }
                         break;
                 }
@@ -606,7 +656,9 @@ FunctionDesc *Compilation::read_function(string str)
     else {
         if (parts[0][parts[0].length() - 1] != ')')
             throw "Invalid syntax for function definition";
-        string params_list = parts[0].substr(pos + 1, (parts[0].length() - 1) - pos - 1);
+        string params_list =
+            parts[0].substr(pos + 1,
+                            (parts[0].length() - 1) - pos - 1);
         vector<string> pre_params;
         split(pre_params, params_list, is_any_of(","));
         for (int i = 0; i < pre_params.size(); i++) {
@@ -657,7 +709,8 @@ void Compilation::add_new_function(FunctionDesc *desc, Gate *gate)
 }
 
 
-void Compilation::add_new_variable(string var_name, size_t len, unsigned int index)
+void Compilation::add_new_variable(string var_name, size_t len,
+                                   unsigned int index)
 {
     SymbolInfo sym;
     
@@ -711,9 +764,10 @@ bool Compilation::run()
     return finished;
 }
 
-bool Compilation::compile(string file_name)
+bool Compilation::compile(const string &file_name)
 {
     ifstream is(file_name.c_str());
+    char buf[BUFFER_SIZE];
     int count;
 
     while (!is.eof()) {
@@ -737,7 +791,9 @@ bool Compilation::compile(string file_name)
         if (first_c_pos != string::npos && stmnt[first_c_pos] == '#')
             continue;
 
-        /* TODO: Common code for "input" and "constant" should be factored out */
+        /*
+         * TODO: Common code for "input" and "constant" should be factored out
+         */
         vector<string> parts;
         split(parts, stmnt, is_any_of(" \t"));
         if (parts[0] == "input") {
@@ -995,4 +1051,7 @@ int parse_function_call(string expr, int pos, vector<string> &arg_exprs)
     }
 
     return pos;
+}
+
+}
 }

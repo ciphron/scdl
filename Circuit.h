@@ -13,7 +13,6 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-
 #ifndef CIRCUIT_H
 #define CIRCUIT_H
 
@@ -21,17 +20,14 @@
 #include <vector>
 #include <map>
 #include <cstdlib>
+#include <stdint.h>
 
 
-/**
- * This is a very cursory version of a circuit evaluator.
- * Currently, this is not parallelized.
- */
 
 #include <iostream>
 
-#define MIN_DEPTH_FOR_PARALLEL 3
-
+namespace scdl {
+   
 enum GateType {
     GATE_MULT,
     GATE_ADD,
@@ -86,48 +82,48 @@ public:
     }
 
     template <class T>
-        T evaluate(const T *inputs, bool store=false) {
+    T evaluate(const T *inputs, bool store=false) {
         for (int i = 0; i < gates.size(); i++)
             gates[i].visited = false;
 
-        /* if (store) { */
-        /*     T stored[gates.size()]; */
-        /*     return eval_gate_with_store(output_gate_index, inputs, stored); */
-        /* } */
-        /* else */
-        return eval_gate_no_store(output_gate_index, inputs);
+        if (store) {
+            std::vector<T> stored(gates.size());
+            //T stored[gates.size()];
+            return eval_gate_with_store(output_gate_index, inputs, &stored[0]);
+        }
+        else
+            return eval_gate_no_store(output_gate_index, inputs);
     }
 
 
 
-    /* template <class T> */
-    /*     T eval_gate_with_store(unsigned int gate_index, const T *inputs, */
-    /*                            T *stored) */
-    /*     { */
-    /*         InternalGate &gate = gates[gate_index]; */
-    /*         if (gate.visited) */
-    /*             return stored[gate_index]; */
+    template <class T>
+    T eval_gate_with_store(unsigned int gate_index, const T *inputs,
+                               T *stored) {
+            InternalGate &gate = gates[gate_index];
+            if (gate.visited)
+                return stored[gate_index];
 
-    /*         if (gate.type == GATE_IN) { */
-    /*             T value = inputs[gate.input_index]; */
-    /*             stored[gate_index] = value; */
-    /*             gate.visited = true; */
-    /*             return value; */
-    /*         } */
+            if (gate.type == GATE_IN) {
+                T value = inputs[gate.input_index];
+                stored[gate_index] = value;
+                gate.visited = true;
+                return value;
+            }
 
-    /*         int fan_in = gate.fan_in; */
-    /*         T aggr = eval_gate_with_store(gate.in_gates[0], inputs, stored); */
-    /*         for (int i = 1; i < fan_in; i++) { */
-    /*             T v = eval_gate_with_store(gate.in_gates[i], inputs, stored); */
-    /*             if (gate.type == GATE_MULT) */
-    /*                 aggr *= v; */
-    /*             else if (gate.type == GATE_ADD) */
-    /*                 aggr += v; */
-    /*         } */
-    /*         stored[gate_index] = aggr; */
-    /*         gate.visited = true; */
-    /*         return aggr; */
-    /*     } */
+            int fan_in = gate.fan_in;
+            T aggr = eval_gate_with_store(gate.in_gates[0], inputs, stored);
+            for (int i = 1; i < fan_in; i++) {
+                T v = eval_gate_with_store(gate.in_gates[i], inputs, stored);
+                if (gate.type == GATE_MULT)
+                    aggr *= v;
+                else if (gate.type == GATE_ADD)
+                    aggr += v;
+            }
+            stored[gate_index] = aggr;
+            gate.visited = true;
+            return aggr;
+        }
 
     template <class T> 
         T eval_gate_no_store(unsigned int gate_index, const T *inputs)
@@ -178,5 +174,6 @@ Gate operator_gate(GateType type, Gate *in1, Gate *in2);
 Gate *new_input_gate(unsigned int index);
 Gate *new_operator_gate(GateType type, Gate *in1, Gate *in2);
 
+}
 
 #endif // CIRCUIT_H

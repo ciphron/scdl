@@ -1,18 +1,17 @@
-CPP=g++
-CCFLAGS=-O3
-LDFLAGS= 
-SOURCES=Circuit.cpp SCDLProgram.cpp eval.cpp
-OBJECTS=$(SOURCES:.cpp=.o)
-EXECUTABLE=eval
-LIBS=
+CXX		= 	g++
+CXXFLAGS 	= 	-O3 -fopenmp -Wall -pedantic
+LDFLAGS 	= 	-ljson
+SOURCES 	= 	$(wildcard *.cpp)
+HEADERS 	= 	$(wildcard *.h)
+OBJECTS 	= 	$(SOURCES:.cpp=.o)
+EXEC		= 	eval
 
-all: $(EXECUTABLE)
+all: $(SOURCES) $(EXEC) 
 
-$(EXECUTABLE): $(OBJECTS) 
-	$(CPP) $(LDFLAGS) $(LIBS) $(OBJECTS) -o $@
+$(EXEC): $(OBJECTS)
+	$(CXX) $(CXXFLAGS) -o $(EXEC) $(OBJECTS) $(LDFLAGS)
 
-.cpp.o:
-	$(CPP) $(CCFLAGS) -c $< -o $@
+$(OBJECTS): Makefile $(HEADERS) 
 
 clean:
-	rm -f *.o $(EXECUTABLE)
+	rm -f $(OBJECTS) $(EXEC)
