@@ -20,6 +20,7 @@
 #include <vector>
 #include <map>
 #include <cstdlib>
+#include <iostream>
 #include "Circuit.h"
 
 #include <boost/lexical_cast.hpp>
@@ -86,7 +87,7 @@ class SCDLProgram {
     }
 
        
-    
+    static SCDLProgram *compile_program_from_stream(std::istream &in);
     static SCDLProgram *compile_program_from_file(std::string file_name);
 
  protected:

@@ -1,0 +1,180 @@
+include "base.scdl"
+input in0
+input in1
+input in2
+input in3
+input in4
+input in5
+input in6
+input in7
+input in8
+input in9
+input in10
+input in11
+input in12
+input in13
+input in14
+input in15
+func g0 = nand(in7, in7)
+func g1 = g0 + zero
+func g2 = g0 * zero
+func g3 = nand(in6, in6)
+func g4 = g3 * zero
+func g5 = g3 + zero
+func g6 = nand(in5, in5)
+func g7 = g6 * zero
+func g8 = g6 + zero
+func g9 = nand(in4, in4)
+func g10 = g9 * zero
+func g11 = g9 + zero
+func g12 = nand(in3, in3)
+func g13 = g12 * zero
+func g14 = g12 + zero
+func g15 = nand(in2, in2)
+func g16 = g15 * zero
+func g17 = g15 + zero
+func g18 = nand(in1, in1)
+func g19 = g18 * zero
+func g20 = g18 + zero
+func g21 = nand(in0, in0)
+func g22 = g21 * one
+func g23 = g20 * g22
+func g24 = or(g19, g23)
+func g25 = g17 * g24
+func g26 = or(g16, g25)
+func g27 = g14 * g26
+func g28 = or(g13, g27)
+func g29 = g11 * g28
+func g30 = or(g10, g29)
+func g31 = g8 * g30
+func g32 = or(g7, g31)
+func g33 = g5 * g32
+func g34 = or(g4, g33)
+func g35 = g1 * g34
+func g36 = or(g2, g35)
+func g37 = g1 + g36
+func g38 = in15 + g37
+func g39 = in15 * g37
+func g40 = g1 + g34
+func g41 = in15 * g40
+func g42 = in15 + g40
+func g43 = g5 + g32
+func g44 = in14 * g43
+func g45 = in14 + g43
+func g46 = g8 + g30
+func g47 = in13 * g46
+func g48 = in13 + g46
+func g49 = g11 + g28
+func g50 = in12 * g49
+func g51 = in12 + g49
+func g52 = g14 + g26
+func g53 = in11 * g52
+func g54 = in11 + g52
+func g55 = g17 + g24
+func g56 = in10 * g55
+func g57 = in10 + g55
+func g58 = g20 + g22
+func g59 = in9 * g58
+func g60 = in9 + g58
+func g61 = g21 + one
+func g62 = in8 * g61
+func g63 = g60 * g62
+func g64 = or(g59, g63)
+func g65 = g57 * g64
+func g66 = or(g56, g65)
+func g67 = g54 * g66
+func g68 = or(g53, g67)
+func g69 = g51 * g68
+func g70 = or(g50, g69)
+func g71 = g48 * g70
+func g72 = or(g47, g71)
+func g73 = g45 * g72
+func g74 = or(g44, g73)
+func g75 = g42 * g74
+func g76 = or(g41, g75)
+func g77 = g38 * g76
+func g78 = or(g39, g77)
+func g79 = g38 + g78
+func g80 = nand(g79, g79)
+func g81 = zero * g80
+func g82 = in0 * g79
+func g83 = or(g81, g82)
+func g84 = eq(g38, g78)
+func g85 = nand(g84, g84)
+func g86 = g83 * g85
+func g87 = in8 * g80
+func g88 = in8 * g79
+func g89 = or(g87, g88)
+func g90 = g89 * g84
+func g91 = or(g86, g90)
+func g92 = zero * g80
+func g93 = in1 * g79
+func g94 = or(g92, g93)
+func g95 = g94 * g85
+func g96 = in9 * g80
+func g97 = in9 * g79
+func g98 = or(g96, g97)
+func g99 = g98 * g84
+func g100 = or(g95, g99)
+func g101 = zero * g80
+func g102 = in2 * g79
+func g103 = or(g101, g102)
+func g104 = g103 * g85
+func g105 = in10 * g80
+func g106 = in10 * g79
+func g107 = or(g105, g106)
+func g108 = g107 * g84
+func g109 = or(g104, g108)
+func g110 = zero * g80
+func g111 = in3 * g79
+func g112 = or(g110, g111)
+func g113 = g112 * g85
+func g114 = in11 * g80
+func g115 = in11 * g79
+func g116 = or(g114, g115)
+func g117 = g116 * g84
+func g118 = or(g113, g117)
+func g119 = zero * g80
+func g120 = in4 * g79
+func g121 = or(g119, g120)
+func g122 = g121 * g85
+func g123 = in12 * g80
+func g124 = in12 * g79
+func g125 = or(g123, g124)
+func g126 = g125 * g84
+func g127 = or(g122, g126)
+func g128 = zero * g80
+func g129 = in5 * g79
+func g130 = or(g128, g129)
+func g131 = g130 * g85
+func g132 = in13 * g80
+func g133 = in13 * g79
+func g134 = or(g132, g133)
+func g135 = g134 * g84
+func g136 = or(g131, g135)
+func g137 = zero * g80
+func g138 = in6 * g79
+func g139 = or(g137, g138)
+func g140 = g139 * g85
+func g141 = in14 * g80
+func g142 = in14 * g79
+func g143 = or(g141, g142)
+func g144 = g143 * g84
+func g145 = or(g140, g144)
+func g146 = zero * g80
+func g147 = in7 * g79
+func g148 = or(g146, g147)
+func g149 = g148 * g85
+func g150 = in15 * g80
+func g151 = in15 * g79
+func g152 = or(g150, g151)
+func g153 = g152 * g84
+func g154 = or(g149, g153)
+func out0 = g91
+func out1 = g100
+func out2 = g109
+func out3 = g118
+func out4 = g127
+func out5 = g136
+func out6 = g145
+func out7 = g154

@@ -155,7 +155,7 @@ typedef pair<string,SymbolInfo> SymbolMapping;
 
 class Compilation {
 public:
-    Compilation(string file_name);
+    Compilation(std::istream &is);
     ~Compilation();
 
     bool run();
@@ -166,7 +166,7 @@ public:
     void fill_function_info(map<string,Function> &name_to_function);
 
 private:
-    bool compile(const string &file_name);
+    bool compile(std::istream &is);
     FunctionDesc *parse_function(string expr, const vector<string> &params);
     FunctionDesc *read_function(string str);
     void add_new_function(FunctionDesc *desc, Gate *gate=NULL);
@@ -182,7 +182,7 @@ private:
     bool finished;
     map<Operation,Gate*> operations;
     vector<Gate*> allocated_gates;
-    string file_name;
+    std::istream &is;
     SymbolTable sym_table;
     size_t num_inputs;
     size_t num_constants;
@@ -308,9 +308,9 @@ size_t SCDLProgram::get_num_circuits() const
     return circuit_map.size();
 }
 
-SCDLProgram *SCDLProgram::compile_program_from_file(string file_name)
+SCDLProgram *SCDLProgram::compile_program_from_stream(std::istream &is)
 {
-    Compilation compilation(file_name);
+    Compilation compilation(is);
     compilation.run();
 
     map<string,Function> name_to_function;
@@ -337,6 +337,13 @@ SCDLProgram *SCDLProgram::compile_program_from_file(string file_name)
     return new SCDLProgram(gate_map, name_to_variable, name_to_constant);;
 }
 
+SCDLProgram *SCDLProgram::compile_program_from_file(string file_name)
+{
+    std::ifstream is(file_name.c_str());
+
+    compile_program_from_stream(is);
+    is.close();
+}
 
 
 /* 
@@ -443,8 +450,8 @@ Gate *Compilation::build_circuit_from_rpn(const list<Token> &tokens)
 }
 
 
-Compilation::Compilation(string file_name)
-    : file_name(file_name), finished(false), num_inputs(0), num_constants(0),
+Compilation::Compilation(std::istream &is)
+    : is(is), finished(false), num_inputs(0), num_constants(0),
       num_functions(0)
 {
 }
@@ -760,13 +767,12 @@ bool Compilation::run()
     if (finished)
         return false;
 
-    finished = compile(file_name);
+    finished = compile(is);
     return finished;
 }
 
-bool Compilation::compile(const string &file_name)
+bool Compilation::compile(std::istream &is)
 {
-    ifstream is(file_name.c_str());
     char buf[BUFFER_SIZE];
     int count;
 
@@ -857,7 +863,8 @@ bool Compilation::compile(const string &file_name)
             if (parts[1][0] != '"' || parts[1][parts[1].length() - 1] != '"')
                 throw "File name must be specified within quotes (\")";
             string fname = parts[1].substr(1, parts[1].length() - 2);
-            if (!compile(fname))
+            ifstream include_is(fname.c_str());
+            if (!compile(include_is))
                 throw "Failed to load program in file " + fname;
         }
         else if (parts[0] == "func") {            
@@ -873,8 +880,6 @@ bool Compilation::compile(const string &file_name)
                 add_new_function(func);           
         }
     }
-
-    is.close();
 
     SymbolTable::iterator itr;
     for (itr = sym_table.begin(); itr != sym_table.end(); itr++) {
