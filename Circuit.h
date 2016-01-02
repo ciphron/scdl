@@ -64,10 +64,12 @@ public:
         : n_inputs(n_inputs), mult_depth(0) {
         std::map<Gate*,unsigned int> visited;
         if (!check_well_formed(gates, n_inputs, output_gate, visited,
-                               &output_gate_index, 0)) {
+                               &output_gate_index)) {
             free_gates();
             throw "Circuit not well formed";
         }
+        mult_depth = compute_depth();
+        count_gates();
     }
     ~Circuit() {
         free_gates();
@@ -81,14 +83,26 @@ public:
         return mult_depth;
     }
 
+    size_t get_num_add_gates() const {
+        return n_add_gates;
+    }
+
+    size_t get_num_mult_gates() const {
+        return n_mult_gates;
+    }
+
     template <class T>
     T evaluate(const T *inputs, bool store=false) {
         for (int i = 0; i < gates.size(); i++)
             gates[i].visited = false;
 
         if (store) {
-            std::vector<T> stored(gates.size());
-            //T stored[gates.size()];
+            // The line below does not work because T may not have a default
+            // constructor so we have to do it a different way
+            // std::vector<T> stored(gates.size());
+            std::vector<T> stored;
+            for (int i = 0; i < gates.size(); i++)
+                stored.push_back(inputs[0]);
             return eval_gate_with_store(output_gate_index, inputs, &stored[0]);
         }
         else
@@ -99,10 +113,11 @@ public:
 
     template <class T>
     T eval_gate_with_store(unsigned int gate_index, const T *inputs,
-                               T *stored) {
+                           T *stored) {
             InternalGate &gate = gates[gate_index];
-            if (gate.visited)
+            if (gate.visited) {
                 return stored[gate_index];
+            }
 
             if (gate.type == GATE_IN) {
                 T value = inputs[gate.input_index];
@@ -115,13 +130,15 @@ public:
             T aggr = eval_gate_with_store(gate.in_gates[0], inputs, stored);
             for (int i = 1; i < fan_in; i++) {
                 T v = eval_gate_with_store(gate.in_gates[i], inputs, stored);
-                if (gate.type == GATE_MULT)
+                if (gate.type == GATE_MULT) {
                     aggr *= v;
+                }
                 else if (gate.type == GATE_ADD)
                     aggr += v;
             }
             stored[gate_index] = aggr;
             gate.visited = true;
+            
             return aggr;
         }
 
@@ -152,16 +169,22 @@ public:
         }
 
 
-
  private:
     unsigned int output_gate_index;
     std::vector<InternalGate> gates;
     size_t n_inputs;
+    size_t n_add_gates;
+    size_t n_mult_gates;
     int mult_depth;
+
+    int compute_depth();
+    int compute_depth_rec(unsigned int gate_index, int depth);
+    void count_gates();
+    void count_gates_rec(unsigned int gate_index);
 
     bool check_well_formed(std::vector<InternalGate> &gates, size_t n_inputs,
                            Gate *current_gate, std::map<Gate*,unsigned int> &visited,
-                           unsigned int *gate_index, int depth);
+                           unsigned int *gate_index);
     
     void free_gates();
 

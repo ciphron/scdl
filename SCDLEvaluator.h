@@ -34,6 +34,15 @@ struct CompilerResult {
     Vars vars;
 };
 
+Vars *read_vars_file(std::istream &in);
+void read_variable(const compiler::SCDLProgram *prog,
+                   const Variable &var,
+                   int *bit_inputs, size_t n_bit_inputs);
+void print_variable(const Variable &var,
+                    std::map<std::string,int> &wire_bits);
+
+
+
 class SCDLEvaluator {
  public:
     SCDLEvaluator();

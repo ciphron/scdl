@@ -1,6 +1,8 @@
 #include "SCDLEvaluator.h"
 #include <iostream>
 #include <fstream>
+#include <algorithm>
+#include <string>
 #include <json/json.h>
 
 using namespace scdl;
@@ -39,6 +41,8 @@ Variable json_object_to_var(json_object *obj)
     
     return var;
 }
+
+namespace scdl {
 
 Vars *read_vars_file(std::istream &in)
 {
@@ -83,25 +87,25 @@ void read_variable(const compiler::SCDLProgram *prog,
 {
     std::cout << var.name << " ";
 
+    size_t n_bits = 0;
+    size_t n_components = var.components.size();
+    scdl::compiler::Variable *prog_vars =
+        new scdl::compiler::Variable[n_components];
+    for (int i = 0; i < n_components; i++) {
+        std::string comp = var.components[i];
+        if (!prog->has_variable(comp))
+            throw "Cannot find component input in SCDL program";
+        prog_vars[i] = prog->get_variable(comp);
+        n_bits += prog_vars[i].len;
+    }                
+
+
     bool is_signed = false;
     switch (var.type) {
         case VAR_INT:
             is_signed = true;
         case VAR_UINT:
-            {
-                size_t n_bits = 0;
-                size_t n_components = var.components.size();
-                scdl::compiler::Variable *prog_vars =
-                    new scdl::compiler::Variable[n_components];
-                for (int i = 0; i < n_components; i++) {
-                    std::string comp = var.components[i];
-                    if (!prog->has_variable(comp))
-                        throw "Cannot find component input in SCDL program";
-                    prog_vars[i] = prog->get_variable(comp);
-                    n_bits += prog_vars[i].len;
-                }                
-
-                
+            {   
                 uint64_t n;
                 uint64_t limit = 1 << ((is_signed) ? (n_bits - 1) : n_bits);
                 do {
@@ -130,13 +134,35 @@ void read_variable(const compiler::SCDLProgram *prog,
                         v >>= 1;
                     }
                 }
-                delete[] prog_vars;
             }
             break;
+        case VAR_BOOL:
+            {
+                if (n_components < 1)
+                    throw "No components for bool type";
+                
+                scdl::compiler::Variable prog_var = prog_vars[0];
+                if (prog_var.input_index >= n_bit_inputs)
+                    throw "Input index out of bounds";
+
+                std::cout << "(bool): ";
+                std::string val_str;
+                std::cin >> val_str;
+                std::transform(val_str.begin(), val_str.end(), val_str.begin(), ::tolower);
+                int val;
+                if (val_str == "true")
+                    val = 1;
+                else if (val_str == "false")
+                    val = 0;
+                else
+                    throw "Invalid value for bool type";
+                bit_inputs[prog_var.input_index] = val;
+                break;
+            }
         default:
             throw "Unknown type";
-    };  
-
+    };
+    delete[] prog_vars;
 }
 
 void print_variable(const Variable &var,
@@ -187,7 +213,7 @@ void print_variable(const Variable &var,
     };  
 
 }
-
+}
 
 CompilerResult SCDLEvaluator::compile(std::istream &scdl_in,
                                       std::istream &vars_in)
@@ -214,7 +240,7 @@ void SCDLEvaluator::evaluate(CompilerResult &result)
     size_t n_bit_inputs = prog->get_num_variable_inputs();
     int *bit_inputs = new int[n_bit_inputs];
     size_t n_bit_constants = prog->get_num_constants();
-    int *bit_constants = new int [n_bit_constants];
+    int *bit_constants = new int[n_bit_constants];
 
     for (int i = 0; i < n_bit_inputs; i++)
         bit_inputs[i] = 0;
@@ -239,11 +265,17 @@ void SCDLEvaluator::evaluate(CompilerResult &result)
                     throw ("Could not find definition for "
                            + var.components[i]).c_str();
                 }
-                std::cout << "depth: "
-                          << prog->get_circuit(var.components[i])->get_mult_depth()
+                Circuit *circ = prog->get_circuit(var.components[i]);
+                std::cout << "depth: " << circ->get_mult_depth() << std::endl;
+                std::cout << "Num add gates: " << circ->get_num_add_gates()
                           << std::endl;
+                std::cout << "Num mult gates: " << circ->get_num_mult_gates()
+                          << std::endl;
+                
+                
                 int v = prog->run(var.components[i], bit_inputs,
                                    bit_constants) % 2;
+                
                 if (v < 2)
                      v = (v + 2) % 2;
 

@@ -22,11 +22,79 @@
 
 namespace scdl {
 
+void Circuit::count_gates()
+{
+    n_add_gates = 0;
+    n_mult_gates = 0;
+    for (int i = 0; i < gates.size(); i++)
+        gates[i].visited = false;
+    count_gates_rec(output_gate_index);
+    
+}
+
+void Circuit::count_gates_rec(unsigned int gate_index)
+{
+    InternalGate &gate = gates[gate_index];
+    if (gate.visited)
+        return;
+
+    gate.visited = true;
+
+    if (gate.type == GATE_MULT)
+        n_mult_gates++;
+    else if (gate.type == GATE_ADD)
+        n_add_gates++;
+
+    for (int i = 0; i < gate.fan_in; i++)
+        count_gates_rec(gate.in_gates[i]);    
+}
+    
+int Circuit::compute_depth()
+{
+    for (int i = 0; i < gates.size(); i++) {
+        gates[i].visited = false;
+        gates[i].depth = 0;
+    }
+
+    return compute_depth_rec(output_gate_index, 0);
+}
+
+int Circuit::compute_depth_rec(unsigned int gate_index, int depth) {
+    InternalGate &gate = gates[gate_index];
+
+    if (gate.visited) {
+        return depth + gate.depth;
+    }
+
+    gate.visited = true;
+    
+    if (gate.type == GATE_IN) {
+        gate.depth = 0;
+        return depth;
+    }
+
+    if (gate.type == GATE_MULT) {
+        depth++;
+    }
+
+    int fan_in = gate.fan_in;
+    int max_depth = compute_depth_rec(gate.in_gates[0], depth);
+    for (int i = 1; i < fan_in; i++) {
+        int d = compute_depth_rec(gate.in_gates[i], depth);
+        if (d > max_depth)
+            max_depth = d;
+    }
+    gate.depth = max_depth - depth;
+
+    return max_depth;
+}
+
+    
 bool Circuit::check_well_formed(std::vector<InternalGate> &gates,
                                 size_t n_inputs,
                                 Gate *current_gate,
                                 std::map<Gate*,unsigned int> &visited,
-                                unsigned int *gate_index, int depth)
+                                unsigned int *gate_index)
 {
     if (visited.find(current_gate) != visited.end()) {
         *gate_index = visited[current_gate];
@@ -42,20 +110,12 @@ bool Circuit::check_well_formed(std::vector<InternalGate> &gates,
 
     bool valid = true;
     size_t fan_in = current_gate->fan_in;
-    int cur_depth = depth;
-
-    if (current_gate->type == GATE_MULT)
-        depth++;
-    if (depth > mult_depth)
-        mult_depth = depth;
-
 
     InternalGate internal;
 
     internal.input_index = current_gate->input_index;
     internal.type = current_gate->type;
     internal.fan_in = fan_in;
-    internal.depth = cur_depth;
     if (fan_in > 0)
         internal.in_gates = new unsigned int[fan_in];
     else
@@ -65,7 +125,7 @@ bool Circuit::check_well_formed(std::vector<InternalGate> &gates,
         unsigned int index;
         valid = check_well_formed(gates, n_inputs,
                                   current_gate->in_gates[i], visited,
-                                  &index, depth);
+                                  &index);
         if (valid) {
             internal.in_gates[i] = index;
         }

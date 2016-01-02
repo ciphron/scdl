@@ -473,7 +473,7 @@ Compilation::~Compilation()
 }
 
 /*
- * TODO: This methods badly needs tidyng up and refactoring.
+ * TODO: This method badly needs tidyng up and refactoring.
  * Also control flow changes (avoidance of continue) are needed.
  */
 FunctionDesc *Compilation::parse_function(string expr,
@@ -618,9 +618,15 @@ FunctionDesc *Compilation::parse_function(string expr,
         else if (t == '*' || t == '+') {
             Token op = Token((t == '*') ? TOKEN_OP_MUL : TOKEN_OP_ADD);
 
+            // * has higher precedence than +
             while (!stack.empty() && is_operator(stack.top())) {
-                output.push_back(stack.top());
-                stack.pop();
+                if (op.type == TOKEN_OP_ADD &&
+                        stack.top().type == TOKEN_OP_MUL) {
+                    output.push_back(stack.top());
+                    stack.pop();
+                }
+                else
+                    break;
             }
             stack.push(op);
         }
