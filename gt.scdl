@@ -1,5 +1,3 @@
-# Free software under GPl v.3 (see LICENSE file).
-
 include "base.scdl"
   
 input A : 2
