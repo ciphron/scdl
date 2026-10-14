@@ -1,3 +1,9 @@
+/*
+ * This code is a terrible hack and parsing is embarassingly
+ * expensive. An LL1 paraer should be used instead.
+ * This project is deprecated. See scdf instead.
+ */
+
 #include "Circuit.h"
 #include "common.h"
 #include <stack>
